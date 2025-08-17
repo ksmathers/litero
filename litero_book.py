@@ -1,4 +1,3 @@
-from turtle import down
 from litero.litero import Litero
 from litero.story import Story
 import getopt
@@ -18,9 +17,6 @@ def save_story(story : Story):
     """ - Load a story as text and turn it into an MP3 using AWS Polly
 
     story :Story: Reference to a story
-    voice :str: Amy, Emma, Ivy, Joanna, Kendra, Kimberly, Sally, Joey, Justin, Kevin, Matthew
-                Geraint, Ayanda, Nicole, Olivia, Russell, Aditi, Raveena, Aria
-    download_only :bool: Fetches the completed MP3 from AWS without starting a new Polly job
     """
     lit_client = Litero(story)
     output_file = story.get_html_path()
