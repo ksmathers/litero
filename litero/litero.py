@@ -12,6 +12,7 @@ import os
 
 CLEANR = re.compile('<.*?>')
 def cleanhtml(raw_html):
+    """Removes HTML tags from a string."""
     txt = re.sub(CLEANR, '', raw_html)
     return txt
 
@@ -38,33 +39,42 @@ class Litero:
             raise Exception(f"Unable to fetch url: {url}")
         return resp.content.decode('UTF-8')
 
-    def get_story_text(self, story, page=1, clean_html=False):
-        if not story.startswith('http'):
-            story = self.base_url + "/s/" + story + "?page=" + str(page)
+    def fetch_story_content(self, story_ref, page=1, textonly=False):
+        """Fetches the story from a given story reference and page number as a generator.
+        Args:
+            story_ref: The URL or local file path of the story chapter.
+            page: The page number to fetch.
+            textonly: If True, returns plain text; otherwise, returns HTML elements.
+        Yields:
+            The text or HTML elements of the story.
+        """
+        if not story_ref.startswith('http'):
+            story_ref = self.base_url + "/s/" + story_ref + "?page=" + str(page)
         else:
-            story = story + "?page=" + str(page)
-        body = self.get(story)
+            story_ref = story_ref + "?page=" + str(page)
+        body = self.get(story_ref)
         soup = BeautifulSoup(body, 'html.parser')
 
-        HAS_TEXT = re.compile('[A-Za-z]{3}')
+        HAS_TEXT = re.compile('[A-Za-z]{3}') # search for at least a 3-letter word to avoid picking up junk
 
         for e in soup.find_all('div', {'class': 'aa_ht'}):
             for para in e.find_all('p'):
                 txt = cleanhtml(str(para))
 
                 if re.search(HAS_TEXT, txt):
-                    if cleanhtml:
+                    if textonly:
                         yield txt
                     else:
                         yield para
 
     def get_story_html(self, chapter):
+        """Fetches the HTML content of a story chapter."""
         result = f"<h1>Chapter {chapter}</h1>\n"
         for i in range(100): # limit to 100 pages per chapter in case of bugs
             try:
                 page = i+1
                 otxt = ""
-                for p in self.get_story_text(self.story.chapter_ref, page):
+                for p in self.fetch_story_content(self.story.chapter_ref, page, textonly=False):
                     otxt += f"<p>{p}</p>\n"
                 result += f"<h2>Page {page}</h2>\n{otxt}\n"
             except:
@@ -73,16 +83,28 @@ class Litero:
         return result
 
     def get_full_story_html(self):
+        """Fetches the full story as HTML."""
         body = ""
         for i in range(len(self.story.story_ref)):
             body += self.get_story_html(i)
             self.story.next_chapter()
         return body
 
-    def get_story(self, story, page=1):
-        return self.get_story_text(story, page, clean_html=True)
+    def get_story_text(self, story, page=1):
+        """
+        Fetches the story as ASCII text for a specific page.
+        """
+        return self.fetch_story_content(story, page, textonly=True)
 
-    def get_full_story(self, story):
+    def get_full_story_ssml(self, story):
+        """
+        Fetches the full story as speech synthesis markup language (SSML).
+
+        Args:
+            story: The Story object representing the story to fetch.
+        Returns:
+            The full story in SSML format
+        """
         ssml="<speak>\n"
         for i in range(100):
             try:
@@ -99,27 +121,35 @@ class Litero:
         return ssml
 
     def get_full_story_txt(self, story : Story):
-        ssml=""
+        """
+        Fetches the full story as plain text, split into parts to fit Polly limits.
+        
+        Args:
+            story: The Story object representing the story to fetch.
+        Yields:
+            Parts of the story as plain text, each part fitting within Polly's limits.
+        """
+        fulltext=""
         for i in range(100):
             try:
                 if i > 0:
-                    ssml += f'\n\n'
+                    fulltext += f'\n\n'
                 page = i+1
                 header = f'Page {page}\n\n'
-                for p in self.get_story(story.chapter_ref, page):
+                for p in self.get_story_text(story.chapter_ref, page):
                     if not header is None:
-                        ssml += header
+                        fulltext += header
                         header = None
-                    ssml += p
-                    ssml += f'\n\n'
-                if len(ssml)>80000:
-                    yield ssml
-                    ssml=""
+                    fulltext += p
+                    fulltext += f'\n\n'
+                if len(fulltext)>80000:
+                    yield fulltext
+                    fulltext=""
             except Exception as ex:
                 print(ex)
                 break
-        ssml += "\n"
-        yield ssml
+        fulltext += "\n"
+        yield fulltext
 
     def get_story_file(self, story : Story):
         #print("get_story_file()")

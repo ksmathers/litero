@@ -4,7 +4,6 @@ import getopt
 import sys
 import os
 import re
-from distutils.dir_util import copy_tree
 import pathlib
 import yaml
 

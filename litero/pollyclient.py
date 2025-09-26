@@ -3,10 +3,12 @@ import os
 import re
 import keyring
 from .story import Story
+from typing import List
+from multicloud.backend.secret import Secret 
 
 
 class PollyClient:
-    def __init__(self, story : Story, story_text : str, voice : str = None):
+    def __init__(self, story : Story, story_text : List[str], voice : str = None):
         language = 'en-GB'
         if voice is None:
             voice = 'Brian'
@@ -36,12 +38,17 @@ class PollyClient:
 
 
 
-    def read(self):
+    def read(self, secret: Secret):
         print("read()")
+        creds = secret.get()
+        assert 'access_id' in creds, "Secret must contain access_id"
+        assert 'secret_key' in creds, "Secret must contain secret_key"
+
         polly = boto3.client('polly',
-             aws_access_key_id=keyring.get_password('aws','access_id'),
-             aws_secret_access_key=keyring.get_password('aws', 'secret_key'),
+             aws_access_key_id=creds['access_id'],
+             aws_secret_access_key=creds['secret_key'],
              region_name='us-west-2')
+        
         res=[]
         part = 0
         for i,txt in enumerate(self.story_text):
@@ -64,6 +71,12 @@ class PollyClient:
 
 
     def download(self, basedir="."):
+        """
+        Downloads the audio files for this story from S3, if they exist.
+        Return True as long as the files are not yet ready. 
+        Returns False if the files are present, in which case they are downloaded.
+        """
+        try_again = True
         s3 = boto3.client('s3',
              aws_access_key_id=keyring.get_password('aws','access_id'),
              aws_secret_access_key=keyring.get_password('aws', 'secret_key'))
@@ -74,10 +87,12 @@ class PollyClient:
         )
         print(res)
         if not 'Contents' in res:
-            return True
+            return try_again
         if len(res['Contents']) < self.parts:
-            return True
+            return try_again
 
+        # All parts are present, download them
+        try_again = False
         destdir = self.story.get_audio_path()
         if not os.path.isdir(destdir):
             os.mkdir(destdir)
@@ -90,4 +105,4 @@ class PollyClient:
             fname = f"{fname[0]}.mp3"
             s3.download_file('frubious-bandersnatch', key, f"{destdir}/{fname}")
 
-        return False
+        return try_again
