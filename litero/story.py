@@ -23,7 +23,8 @@ class Story:
         string instead of a list.  A story can also be specified as a single string, which is interpreted as a single chapter URL with
         the title matching the chapter name.
         """
-        assert isinstance(story_ref, (dict, str)), "story_ref must be a dict or a string"
+
+        assert isinstance(story_ref, (dict, str)), f"story_ref must be a dict or a string, not {type(story_ref)}"
         self.chapter = 1
         if type(story_ref) is dict:
             self.story_ref = story_ref
@@ -47,7 +48,7 @@ class Story:
     @property
     def chapter_ref(self):
         """Returns the current chapter reference (URL or local file path)."""
-        return self.story_ref[self.chapter-1]
+        return self.story_ref["chapters"][self.chapter-1]
 
     def get_normalized_title(self):
         """Generates a title suitable for use in a file path or an S3 key."""

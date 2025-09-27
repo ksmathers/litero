@@ -66,8 +66,7 @@ def html_to_tts_chunks(html_string: str) -> List[str]:
             elif element.name in ["em", "i", "strong", "b"]:
                 # Add excited marker before emphasis
                 #excited_tag = soup.new_string("[excited]")
-                excited_tag = soup.new_string(",[um],")
-                element.insert_before(excited_tag)
+                element.replace_with(f"[{element.get_text()}](+8)")
                 
             elif element.name == "br":
                 element.replace_with("[break=small]")

@@ -52,8 +52,7 @@ def main(argv):
         usage(app)
 
     for story_def in stories['stories']:
-        story_ref = story_def['chapters']
-        story = Story(story_ref)
+        story = Story(story_def)
         save_story(story)
 
 
