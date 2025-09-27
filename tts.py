@@ -143,7 +143,7 @@ def synthesize(chunks: List[str], voice: str, speed: float, device: str | None) 
     break_time = 0
     for idx, chunk in enumerate(chunks, 1):
         print(f"[TTS] Synthesizing chunk {idx}/{len(chunks)} (len={len(chunk)})")
-        if idx > 100: break # testing
+        #if idx > 100: break # testing
 
         # Handle special break markers
         if chunk.startswith("[break="):
